@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой Дашборд</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1 { text-align: center; font-size: 1.5rem; margin-bottom: 20px; }
+
+        /* Кнопка */
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        button#refreshBtn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+            transition: background 0.3s;
+        }
+        button#refreshBtn:active { transform: scale(0.98); }
+        button#refreshBtn:disabled { background-color: #ccc; }
+
+        /* Сетка блоков */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr; 
+            gap: 15px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Карточки */
+        .card {
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: var(--card-shadow);
+            position: relative;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 1rem;
+            align-items: center;
+        }
+
+        .positive { color: #008000; font-weight: bold; }
+        .negative { color: #d32f2f; font-weight: bold; }
+        .neutral { color: #555; }
+        .sub-info { font-size: 0.85rem; color: #666; font-style: italic; margin-top: 5px; }
+
+        /* --- ИСПРАВЛЕНИЕ ВЫСОТЫ ВИДЖЕТА --- */
+        .tradingview-widget-container {
+            height: 126px !important; /* Увеличено, чтобы влез график и цена */
+            width: 100% !important;
+            margin-top: 10px;
+        }
+
+        /* Цвета блоков */
+        #block-crypto { background-color: #e3f2fd; }
+        #block-ip { background-color: #e8f5e9; }
+        #block-fiat { background-color: #fff3e0; }
+        #block-commodities { background-color: #fce4ec; }
+
+        @media (min-width: 768px) {
+            .container {
+                max-width: 800px;
+                grid-template-columns: 1fr 1fr;
+            }
+            #block-crypto { grid-column: span 2; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <button id="refreshBtn" onclick="updateAllData()">Обновить данные</button>
+    </div>
+
+    <div class="container">
+        <div id="block-crypto" class="card">
+            <h2>Crypto (24h %)</h2>
+            <div id="crypto-content">Загрузка...</div>
+            <div id="crypto-math" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top:10px;"></div>
+        </div>
+
+        <div id="block-ip" class="card">
+            <h2>Network</h2>
+            <div id="ip-content">Загрузка...</div>
+        </div>
+
+        <div id="block-fiat" class="card">
+            <h2>Валюты (к RUB)</h2>
+            <div id="fiat-content">Загрузка...</div>
+        </div>
+
+        <div id="block-commodities" class="card">
+            <h2>Сырье (USD)</h2>
+            
+            <div id="gold-content">
+                Загрузка золота...
+            </div>
+
+            <div style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); pt-2;">
+                <div style="font-size: 0.9rem; color: #666; margin-bottom: 5px;">Brent Oil (Live):</div>
+                <div class="tradingview-widget-container">
+                  <div class="tradingview-widget-container__widget"></div>
+                  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+                  {
+                  "symbol": "TVC:UKOIL",
+                  "width": "100%",
+                  "height": "126", 
+                  "colorTheme": "light",
+                  "isTransparent": true,
+                  "locale": "ru"
+                }
+                  </script>
+                </div>
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const cryptoIds = ['cosmos', 'aptos', 'internet-computer', 'dash', 'chia', 'astar', 'ethereum', 'pax-gold'];
+        
+        async function updateAllData() {
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.innerText = "Обновление...";
+
+            try {
+                await Promise.all([
+                    fetchCryptoAndGold(), 
+                    fetchIP(),
+                    fetchFiat()
+                ]);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Обновить";
+            }
+        }
+
+        // --- КРИПТА + ЗОЛОТО ---
+        async function fetchCryptoAndGold() {
+            const containerCrypto = document.getElementById('crypto-content');
+            const containerMath = document.getElementById('crypto-math');
+            const containerGold = document.getElementById('gold-content');
+            
+            try {
+                const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds.join(',')}&vs_currencies=usd&include_24hr_change=true`);
+                const data = await response.json();
+
+                // 1. Рендер Крипты
+                let htmlCrypto = '';
+                const formatCoin = (id, name) => {
+                    if(!data[id]) return '';
+                    const price = data[id].usd;
+                    const change = data[id].usd_24h_change.toFixed(2);
+                    const colorClass = change >= 0 ? 'positive' : 'negative';
+                    const sign = change >= 0 ? '+' : '';
+                    return `<div class="data-row">
+                                <span>${name.toUpperCase()}</span>
+                                <span>$${price} <span class="${colorClass}">(${sign}${change}%)</span></span>
+                            </div>`;
+                };
+
+                htmlCrypto += formatCoin('cosmos', 'ATOM');
+                htmlCrypto += formatCoin('aptos', 'APTOS');
+                htmlCrypto += '<hr style="opacity: 0.3; margin: 8px 0;">'; 
+                htmlCrypto += formatCoin('internet-computer', 'ICP');
+                htmlCrypto += formatCoin('dash', 'DASH');
+                htmlCrypto += formatCoin('chia', 'XCH');
+                htmlCrypto += formatCoin('astar', 'ASTR');
+                htmlCrypto += formatCoin('ethereum', 'ETH');
+                containerCrypto.innerHTML = htmlCrypto;
+
+                // 2. Математика ATOM/APTOS
+                if (data['cosmos'] && data['aptos']) {
+                    const atom = data['cosmos'].usd;
+                    const aptos = data['aptos'].usd;
+                    const ratio = (atom / aptos).toFixed(4);
+                    const diff = (atom - aptos).toFixed(2);
+                    containerMath.innerHTML = `
+                        <div class="data-row"><strong>ATOM / APTOS:</strong> <span>${ratio}</span></div>
+                        <div class="data-row"><strong>ATOM - APTOS:</strong> <span>$${diff}</span></div>
+                    `;
+                }
+
+                // 3. ЗОЛОТО
+                let goldPrice = "---";
+                let goldChange = 0;
+                let goldHtml = '';
+                
+                if(data['pax-gold']) {
+                    goldPrice = data['pax-gold'].usd.toLocaleString('en-US');
+                    goldChange = data['pax-gold'].usd_24h_change.toFixed(2);
+                    const colorClassG = goldChange >= 0 ? 'positive' : 'negative';
+                    const signG = goldChange >= 0 ? '+' : '';
+                    
+                    goldHtml = `
+                        <div class="data-row" style="color:#d4af37; font-weight:bold;">
+                            <span>Gold (XAU)</span> 
+                            <span>$${goldPrice} <span class="${colorClassG}" style="font-size:0.9rem">(${signG}${goldChange}%)</span></span>
+                        </div>
+                    `;
+                }
+                containerGold.innerHTML = goldHtml;
+
+            } catch (error) {
+                containerCrypto.innerHTML = '<span class="negative">Ошибка Crypto API</span>';
+                containerGold.innerHTML = '<span class="negative">Нет данных по золоту</span>';
+            }
+        }
+
+        // --- IP ---
+        async function fetchIP() {
+            const container = document.getElementById('ip-content');
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                container.innerHTML = `
+                    <div class="data-row"><strong>IP:</strong> <span>${data.ip}</span></div>
+                    <div class="data-row"><strong>Loc:</strong> <span>${data.city}, ${data.country_name}</span></div>
+                    <div class="data-row"><strong>Org:</strong> <span>${data.org}</span></div>
+                `;
+            } catch (error) {
+                container.innerHTML = 'Не удалось получить IP';
+            }
+        }
+
+        // --- ВАЛЮТЫ ---
+        async function fetchFiat() {
+            const container = document.getElementById('fiat-content');
+            try {
+                const response = await fetch('https://open.er-api.com/v6/latest/USD');
+                const data = await response.json();
+                const rates = data.rates;
+                const rub = rates.RUB; 
+                
+                const calcRate = (currencyCode) => {
+                    const rateInUsd = rates[currencyCode]; 
+                    return ((1 / rateInUsd) * rub).toFixed(2);
+                };
+
+                const usdRub = rub.toFixed(2);
+                const eurRub = calcRate('EUR');
+                const gelRub = calcRate('GEL');
+                const thbRub = calcRate('THB');
+
+                container.innerHTML = `
+                    <div class="data-row"><span>USD ($)</span> <span>${usdRub} ₽</span></div>
+                    <div class="data-row"><span>EUR (€)</span> <span>${eurRub} ₽</span></div>
+                    <div class="data-row"><span>GEL (₾)</span> <span>${gelRub} ₽</span></div>
+                    <div class="data-row"><span>THB (฿)</span> <span>${thbRub} ₽</span></div>
+                `;
+
+            } catch (error) {
+                container.innerHTML = 'Ошибка курсов валют';
+            }
+        }
+
+        window.onload = updateAllData;
+    </script>
+</body>
+</html>
