@@ -52,7 +52,7 @@
 
         /* Карточки */
         .card {
-            padding: 20px;
+            padding: 15px; /* Сделано компактнее */
             border-radius: 15px;
             box-shadow: var(--card-shadow);
             position: relative;
@@ -63,25 +63,27 @@
             font-size: 1.2rem;
             border-bottom: 1px solid rgba(0,0,0,0.1);
             padding-bottom: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 10px; /* Сделано компактнее */
         }
 
+        /* --- КРИПТО БЛОК: СДЕЛАНО КОМПАКТНЕЕ --- */
         .data-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 1rem;
+            margin-bottom: 5px; /* Сделано компактнее */
+            font-size: 0.95rem; /* Чуть меньше шрифт */
             align-items: center;
         }
+        /* --- /КРИПТО БЛОК: СДЕЛАНО КОМПАКТНЕЕ --- */
 
         .positive { color: #008000; font-weight: bold; }
         .negative { color: #d32f2f; font-weight: bold; }
         .neutral { color: #555; }
         .sub-info { font-size: 0.85rem; color: #666; font-style: italic; margin-top: 5px; }
 
-        /* --- ИСПРАВЛЕНИЕ ВЫСОТЫ ВИДЖЕТА --- */
+        /* Настройка виджета TradingView */
         .tradingview-widget-container {
-            height: 126px !important; /* Увеличено, чтобы влез график и цена */
+            height: 126px !important;
             width: 100% !important;
             margin-top: 10px;
         }
@@ -111,7 +113,7 @@
         <div id="block-crypto" class="card">
             <h2>Crypto (24h %)</h2>
             <div id="crypto-content">Загрузка...</div>
-            <div id="crypto-math" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top:10px;"></div>
+            <div id="crypto-math" style="margin-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); padding-top:10px;"></div>
         </div>
 
         <div id="block-ip" class="card">
@@ -131,7 +133,7 @@
                 Загрузка золота...
             </div>
 
-            <div style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); pt-2;">
+            <div style="margin-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); padding-top:10px;">
                 <div style="font-size: 0.9rem; color: #666; margin-bottom: 5px;">Brent Oil (Live):</div>
                 <div class="tradingview-widget-container">
                   <div class="tradingview-widget-container__widget"></div>
@@ -151,7 +153,8 @@
     </div>
 
     <script>
-        const cryptoIds = ['cosmos', 'aptos', 'internet-computer', 'dash', 'chia', 'astar', 'ethereum', 'pax-gold'];
+        // ДОБАВЛЕН BITCOIN
+        const cryptoIds = ['bitcoin', 'cosmos', 'aptos', 'internet-computer', 'dash', 'chia', 'astar', 'ethereum', 'pax-gold'];
         
         async function updateAllData() {
             const btn = document.getElementById('refreshBtn');
@@ -192,13 +195,15 @@
                     const sign = change >= 0 ? '+' : '';
                     return `<div class="data-row">
                                 <span>${name.toUpperCase()}</span>
-                                <span>$${price} <span class="${colorClass}">(${sign}${change}%)</span></span>
+                                <span>$${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} <span class="${colorClass}">(${sign}${change}%)</span></span>
                             </div>`;
                 };
 
+                // ДОБАВЛЕН BTC
+                htmlCrypto += formatCoin('bitcoin', 'BTC');
                 htmlCrypto += formatCoin('cosmos', 'ATOM');
                 htmlCrypto += formatCoin('aptos', 'APTOS');
-                htmlCrypto += '<hr style="opacity: 0.3; margin: 8px 0;">'; 
+                htmlCrypto += '<hr style="opacity: 0.3; margin: 5px 0;">'; 
                 htmlCrypto += formatCoin('internet-computer', 'ICP');
                 htmlCrypto += formatCoin('dash', 'DASH');
                 htmlCrypto += formatCoin('chia', 'XCH');
@@ -224,7 +229,7 @@
                 let goldHtml = '';
                 
                 if(data['pax-gold']) {
-                    goldPrice = data['pax-gold'].usd.toLocaleString('en-US');
+                    goldPrice = data['pax-gold'].usd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                     goldChange = data['pax-gold'].usd_24h_change.toFixed(2);
                     const colorClassG = goldChange >= 0 ? 'positive' : 'negative';
                     const signG = goldChange >= 0 ? '+' : '';
